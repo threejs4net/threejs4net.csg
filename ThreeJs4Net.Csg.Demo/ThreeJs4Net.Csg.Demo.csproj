@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\**" />
+    <Compile Remove="examples\**" />
+    <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="examples\**" />
+    <None Remove="Data\**" />
+    <None Remove="examples\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Example.cs" />
+    <Compile Remove="ExampleAttribute.cs" />
+    <Compile Remove="ExampleInfo.cs" />
+    <Compile Remove="Form1.cs" />
+    <Compile Remove="Form1.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Form1.resx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTK" Version="3.3.1" />
+    <PackageReference Include="OpenTK.GLControl" Version="3.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\threejs4net\ThreeJs4Net\ThreeJs4Net.csproj" />
+    <ProjectReference Include="..\ThreeJs4Net.Csg\ThreeJs4Net.Csg.csproj" />
+  </ItemGroup>
+
+</Project>
