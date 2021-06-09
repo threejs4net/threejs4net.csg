@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using ThreeJs4Net.Core;
-using ThreeJs4Net.Csg;
 using ThreeJs4Net.Materials;
 using ThreeJs4Net.Math;
 using ThreeJs4Net.Objects;
@@ -9,34 +8,25 @@ namespace ThreeJs4Net.Csg
 {
     public class CSG
     {
+        private static Matrix3 _tmpm3 = new Matrix3();
+        private static bool doRemove = false;
+        private static string currentOp = string.Empty;
+        private static dynamic currentPrim = null;
+        private static CSG nextPrim = null;
+        private static Mesh sourceMesh = null;
+        private IList<Polygon> polygons = null;
 
+        public CSG()
+        {
+            this.polygons = new List<Polygon>();
+        }
 
-        //import {
-        //  BufferAttribute,
-        //  BufferGeometry,
-        //  Material,
-        //  Matrix3,
-        //  Matrix4,
-        //  Mesh,
-        //  Vector3,
-        //} from 'three';
-        //import { NBuf2, NBuf3 } from './NBuf';
-        //import { Node } from './Node';
-        //import { Polygon } from './Polygon';
-        //import { Vector } from './Vector';
-        //import { Vertex } from './Vertex';
-
-        ///**
-        // * Holds a binary space partition tree representing a 3D solid. Two solids can
-        // * be combined using the `union()`, `subtract()`, and `intersect()` methods.
-        // */
-        //export class CSG {
-        //  static fromPolygons(polygons: Polygon[]): CSG {
-        //    const csg = new CSG();
-        //    csg.polygons = polygons;
-        //    return csg;
-        //  }
-
+        /// <summary>
+        /// Holds a binary space partition tree representing a 3D solid. Two solids can
+        /// be combined using the `union()`, `subtract()`, and `intersect()` methods.
+        /// </summary>
+        /// <param name="polygons"></param>
+        /// <returns></returns>
         public static CSG fromPolygons(IList<Polygon> polygons)
         {
             var csg = new CSG();
@@ -44,59 +34,6 @@ namespace ThreeJs4Net.Csg
             return csg;
         }
 
-        //  static fromGeometry(geom: BufferGeometry, objectIndex?: any): CSG {
-        //    let polys = [];
-        //    const posattr = geom.attributes.position;
-        //    const normalattr = geom.attributes.normal;
-        //    const uvattr = geom.attributes.uv;
-        //    const colorattr = geom.attributes.color;
-        //    let index;
-
-        //    if (geom.index) {
-        //      index = geom.index.array;
-        //    } else {
-        //      index = new Array((posattr.array.length / posattr.itemSize) | 0);
-        //      for (let i = 0; i < index.length; i++) index[i] = i;
-        //    }
-
-        //    const triCount = (index.length / 3) | 0;
-        //    polys = new Array(triCount);
-
-        //    for (let i = 0, pli = 0, l = index.length; i < l; i += 3, pli++) {
-        //      const vertices = new Array(3);
-        //      for (let j = 0; j < 3; j++) {
-        //        const vi = index[i + j];
-        //        const vp = vi * 3;
-        //        const vt = vi * 2;
-        //        const x = posattr.array[vp];
-        //        const y = posattr.array[vp + 1];
-        //        const z = posattr.array[vp + 2];
-        //        const nx = normalattr.array[vp];
-        //        const ny = normalattr.array[vp + 1];
-        //        const nz = normalattr.array[vp + 2];
-        //        const u = uvattr.array[vt];
-        //        const v = uvattr.array[vt + 1];
-
-        //        vertices[j] = new Vertex(
-        //          new Vector(x, y, z),
-        //          new Vector(nx, ny, nz),
-        //          new Vector(u, v, 0),
-        //          colorattr &&
-        //            new Vector(
-        //              colorattr.array[vt],
-        //              colorattr.array[vt + 1],
-        //              colorattr.array[vt + 2]
-        //            )
-        //        );
-        //      }
-
-        //      polys[pli] = new Polygon(vertices, objectIndex);
-        //    }
-
-        //    return CSG.fromPolygons(polys);
-        //  }
-
-        //TODO: Review with Leo
         public static CSG fromGeometry(BufferGeometry geom, int? objectIndex = null)
         {
             Polygon[] polys = null;
@@ -184,90 +121,6 @@ namespace ThreeJs4Net.Csg
             return CSG.fromPolygons(polys);
         }
 
-        //  static toGeometry(csg: CSG, toMatrix: Matrix4): BufferGeometry {
-        //    let triCount = 0;
-        //    const ps = csg.polygons;
-        //    for (const p of ps) {
-        //      triCount += p.vertices.length - 2;
-        //    }
-        //    const geom = new BufferGeometry();
-
-        //    const vertices = new NBuf3(triCount * 3 * 3);
-        //    const normals = new NBuf3(triCount * 3 * 3);
-        //    const uvs = new NBuf2(triCount * 2 * 3);
-        //    let colors: NBuf3;
-        //    const grps = [];
-        //    for (const p of ps) {
-        //      const pvs = p.vertices;
-        //      const pvlen = pvs.length;
-        //      if (p.shared !== undefined) {
-        //        if (!grps[p.shared]) grps[p.shared] = [];
-        //      }
-        //      if (pvlen && pvs[0].color !== undefined) {
-        //        if (!colors) colors = new NBuf3(triCount * 3 * 3);
-        //      }
-        //      for (let j = 3; j <= pvlen; j++) {
-        //        p.shared !== undefined &&
-        //          grps[p.shared].push(
-        //            vertices.top / 3,
-        //            vertices.top / 3 + 1,
-        //            vertices.top / 3 + 2
-        //          );
-        //        vertices.write(pvs[0].pos);
-        //        vertices.write(pvs[j - 2].pos);
-        //        vertices.write(pvs[j - 1].pos);
-        //        normals.write(pvs[0].normal);
-        //        normals.write(pvs[j - 2].normal);
-        //        normals.write(pvs[j - 1].normal);
-        //        uvs.write(pvs[0].uv);
-        //        uvs.write(pvs[j - 2].uv);
-        //        uvs.write(pvs[j - 1].uv);
-        //        if (colors) {
-        //          colors.write(pvs[0].color);
-        //          colors.write(pvs[j - 2].color);
-        //          colors.write(pvs[j - 1].color);
-        //        }
-        //      }
-        //    }
-        //    geom.setAttribute('position', new BufferAttribute(vertices.array, 3));
-        //    geom.setAttribute('normal', new BufferAttribute(normals.array, 3));
-        //    geom.setAttribute('uv', new BufferAttribute(uvs.array, 2));
-        //    colors && geom.setAttribute('color', new BufferAttribute(colors.array, 3));
-        //    if (grps.length) {
-        //      let index = [];
-        //      let gbase = 0;
-        //      for (let gi = 0; gi < grps.length; gi++) {
-        //        geom.addGroup(gbase, grps[gi].length, gi);
-        //        gbase += grps[gi].length;
-        //        index = index.concat(grps[gi]);
-        //      }
-        //      geom.setIndex(index);
-        //    }
-        //    const inv = new Matrix4().copy(toMatrix).invert();
-        //    geom.applyMatrix4(inv);
-        //    geom.computeBoundingSphere();
-        //    geom.computeBoundingBox();
-
-        //    return geom;
-        //  }
-
-        //  static fromMesh(mesh: Mesh, objectIndex?: any): CSG {
-        //    const csg = CSG.fromGeometry(mesh.geometry, objectIndex);
-        //    const ttvv0 = new Vector3();
-        //    const tmpm3 = new Matrix3();
-        //    tmpm3.getNormalMatrix(mesh.matrix);
-        //    for (let i = 0; i < csg.polygons.length; i++) {
-        //      const p = csg.polygons[i];
-        //      for (let j = 0; j < p.vertices.length; j++) {
-        //        const v = p.vertices[j];
-        //        v.pos.copy(ttvv0.copy(v.pos.toVector3()).applyMatrix4(mesh.matrix));
-        //        v.normal.copy(ttvv0.copy(v.normal.toVector3()).applyMatrix3(tmpm3));
-        //      }
-        //    }
-        //    return csg;
-        //  }
-
-
         public static BufferGeometry toGeometry(CSG csg, Matrix4 toMatrix)
         {
             var triCount = 0;
@@ -332,18 +185,16 @@ namespace ThreeJs4Net.Csg
                     }
                 }
             }
-            //Review with Leo
+
             geom.SetAttribute("position", new BufferAttribute<float>(vertices.array, 3));
-            //Review with Leo
             geom.SetAttribute("normal", new BufferAttribute<float>(normals.array, 3));
-            //Review with Leo
             geom.SetAttribute("uv", new BufferAttribute<float>(uvs.array, 2));
+
             if (colors != null)
             {
-                //Review with Leo
                 geom.SetAttribute("color", new BufferAttribute<float>(colors.array, 3));
             }
-            //Review with Leo
+
             if (grps != null && grps.Count > 0)
             {
                 for (int gi = 0; gi < grps.Count; gi++)
@@ -353,19 +204,19 @@ namespace ThreeJs4Net.Csg
                         grps[gi] = new List<uint>();
                     }
                 }
-                //Review with Leo
+
                 var index = new List<uint>();
                 var gbase = 0;
-                
+
                 for (var gi = 0; gi < grps.Count; gi++)
                 {
                     geom.AddGroup(gbase, grps[gi].Count, gi);
                     gbase += grps[gi].Count;
-                    //Review with Leo
+
                     index.AddRange(grps[gi]);
 
                 }
-                //TODO: @@
+
                 var bufferIndex = new BufferAttribute<uint>(index.ToArray(), 1);
                 geom.SetIndex(bufferIndex);
             }
@@ -377,28 +228,6 @@ namespace ThreeJs4Net.Csg
             return geom;
         }
 
-        //        static fromMesh(mesh: Mesh, objectIndex?: any) : CSG
-        //{
-        //    const csg = CSG.fromGeometry(mesh.geometry, objectIndex);
-        //        const ttvv0 = new Vector3();
-        //        const tmpm3 = new Matrix3();
-        //        tmpm3.getNormalMatrix(mesh.matrix);
-        //    for (let i = 0; i<csg.polygons.length; i++)
-        //    {
-        //        const p = csg.polygons[i];
-        //        for (let j = 0; j<p.vertices.length; j++)
-        //        {
-        //            const v = p.vertices[j];
-        //        v.pos.copy(ttvv0.copy(v.pos.toVector3()).applyMatrix4(mesh.matrix));
-        //            v.normal.copy(ttvv0.copy(v.normal.toVector3()).applyMatrix3(tmpm3));
-        //        }
-        //}
-        //return csg;
-        //}
-
-
-
-        //Review with Leo
         public static CSG fromMesh(Mesh mesh, int? objectIndex = null)
         {
             //TODO: Review with Leo
@@ -420,27 +249,7 @@ namespace ThreeJs4Net.Csg
             return csg;
         }
 
-        //  static toMesh(
-        //    csg: CSG,
-        //    toMatrix: Matrix4,
-        //    toMaterial?: Material | Material[]
-        //  ): Mesh {
-        //    const geom = CSG.toGeometry(csg, toMatrix);
-        //    const m = new Mesh(geom, toMaterial);
-        //    m.matrix.copy(toMatrix);
-        //    m.matrix.decompose(m.position, m.quaternion, m.scale);
-        //    m.rotation.setFromQuaternion(m.quaternion);
-        //    m.updateMatrixWorld();
-        //    m.castShadow = m.receiveShadow = true;
-        //    return m;
-        //  }
-
-        public static Mesh toMesh(
-          CSG csg,
-          Matrix4 toMatrix,
-          Material[] toMaterial
-
-        )
+        public static Mesh toMesh(CSG csg, Matrix4 toMatrix, Material[] toMaterial)
         {
             var geom = CSG.toGeometry(csg, toMatrix);
             var m = new Mesh(geom, toMaterial[0]);
@@ -452,20 +261,10 @@ namespace ThreeJs4Net.Csg
             return m;
         }
 
-        //TODO: Review with Leo
-        public static Mesh toMesh(
-          CSG csg,
-          Matrix4 toMatrix,
-          Material toMaterial)
+        public static Mesh toMesh(CSG csg, Matrix4 toMatrix, Material toMaterial)
         {
             return toMesh(csg, toMatrix, new Material[] { toMaterial });
         }
-
-        //  static union(meshA: Mesh, meshB: Mesh): Mesh {
-        //    const csgA = CSG.fromMesh(meshA);
-        //    const csgB = CSG.fromMesh(meshB);
-        //    return CSG.toMesh(csgA.union(csgB), meshA.matrix, meshA.material);
-        //  }
 
         public static Mesh union(Mesh meshA, Mesh meshB)
         {
@@ -474,11 +273,12 @@ namespace ThreeJs4Net.Csg
             return CSG.toMesh(csgA.union(csgB), meshA.Matrix, meshA.Material);
         }
 
-        //  static subtract(meshA: Mesh, meshB: Mesh): Mesh {
-        //    const csgA = CSG.fromMesh(meshA);
-        //    const csgB = CSG.fromMesh(meshB);
-        //    return CSG.toMesh(csgA.subtract(csgB), meshA.matrix, meshA.material);
-        //  }
+        public static BufferGeometry union(BufferGeometry meshA, BufferGeometry meshB, Matrix4 matrix = null)
+        {
+            var csgA = CSG.fromGeometry(meshA);
+            var csgB = CSG.fromGeometry(meshB);
+            return CSG.toGeometry(csgA.union(csgB), matrix ?? new Matrix4());
+        }
 
         public static Mesh subtract(Mesh meshA, Mesh meshB)
         {
@@ -498,12 +298,13 @@ namespace ThreeJs4Net.Csg
             //return CSG.toMesh(csgA.subtract(csgB), meshA.Matrix, meshA.Material);
         }
 
-        //  static intersect(meshA: Mesh, meshB: Mesh): Mesh {
-        //    const csgA = CSG.fromMesh(meshA);
-        //    const csgB = CSG.fromMesh(meshB);
-        //    return CSG.toMesh(csgA.intersect(csgB), meshA.matrix, meshA.material);
-        //  }
-
+        public static BufferGeometry subtract(BufferGeometry meshA, BufferGeometry meshB, Matrix4 matrix = null)
+        {
+            var csgA = CSG.fromGeometry(meshA);
+            var csgB = CSG.fromGeometry(meshB);
+            var mesh = CSG.toGeometry(csgA.subtract(csgB), matrix ?? new Matrix4());
+            return mesh;
+        }
         public static Mesh intersect(Mesh meshA, Mesh meshB)
         {
             var csgA = CSG.fromMesh(meshA);
@@ -511,29 +312,12 @@ namespace ThreeJs4Net.Csg
             return CSG.toMesh(csgA.intersect(csgB), meshA.Matrix, meshA.Material);
         }
 
-        //  private polygons = new Array<Polygon>();
-
-        private static Matrix3 _tmpm3 = new Matrix3();
-        private static bool doRemove = false;
-        private static string currentOp = string.Empty;
-        private static dynamic currentPrim = null;
-        private static CSG nextPrim = null;
-        private static Mesh sourceMesh = null;
-        private IList<Polygon> polygons = null;
-
-        public CSG()
+        public static BufferGeometry intersect(BufferGeometry meshA, BufferGeometry meshB, Matrix4 matrix = null)
         {
-            this.polygons = new List<Polygon>();
+            var csgA = CSG.fromGeometry(meshA);
+            var csgB = CSG.fromGeometry(meshB);
+            return CSG.toGeometry(csgA.intersect(csgB), matrix ?? new Matrix4());
         }
-
-
-        //  clone(): CSG {
-        //    const csg = new CSG();
-        //    csg.polygons = this.polygons.map((p) => {
-        //      return p.clone();
-        //    });
-        //    return csg;
-        //  }
 
         public CSG clone()
         {
@@ -552,18 +336,6 @@ namespace ThreeJs4Net.Csg
         //    return this.polygons;
         //  }
 
-        //  union(csg: CSG): CSG {
-        //    const a = new Node(this.clone().polygons);
-        //    const b = new Node(csg.clone().polygons);
-        //    a.clipTo(b);
-        //    b.clipTo(a);
-        //    b.invert();
-        //    b.clipTo(a);
-        //    b.invert();
-        //    a.build(b.allPolygons());
-        //    return CSG.fromPolygons(a.allPolygons());
-        //  }
-
         public CSG union(CSG csg)
         {
             var a = new Node(this.clone().polygons);
@@ -579,20 +351,6 @@ namespace ThreeJs4Net.Csg
             return CSG.fromPolygons(a.allPolygons());
 
         }
-
-        //  subtract(csg: CSG): CSG {
-        //    const a = new Node(this.clone().polygons);
-        //    const b = new Node(csg.clone().polygons);
-        //    a.invert();
-        //    a.clipTo(b);
-        //    b.clipTo(a);
-        //    b.invert();
-        //    b.clipTo(a);
-        //    b.invert();
-        //    a.build(b.allPolygons());
-        //    a.invert();
-        //    return CSG.fromPolygons(a.allPolygons());
-        //  }
 
         public CSG subtract(CSG csg)
         {
@@ -613,18 +371,6 @@ namespace ThreeJs4Net.Csg
             return CSG.fromPolygons(a.allPolygons());
         }
 
-        //  intersect(csg: CSG): CSG {
-        //    const a = new Node(this.clone().polygons);
-        //    const b = new Node(csg.clone().polygons);
-        //    a.invert();
-        //    b.clipTo(a);
-        //    b.invert();
-        //    a.clipTo(b);
-        //    b.clipTo(a);
-        //    a.build(b.allPolygons());
-        //    a.invert();
-        //    return CSG.fromPolygons(a.allPolygons());
-        //  }
 
         public CSG intersect(CSG csg)
         {
@@ -640,16 +386,10 @@ namespace ThreeJs4Net.Csg
             return CSG.fromPolygons(a.allPolygons());
         }
 
-        //  // Return a new CSG solid with solid and empty space switched. This solid is
-        //  // not modified.
-        //  inverse(): CSG {
-        //    const csg = this.clone();
-        //    for (const p of csg.polygons) {
-        //      p.flip();
-        //    }
-        //    return csg;
-        //  }
-
+        /// <summary>
+        /// Return a new CSG solid with solid and empty space switched. This solid is not modified.
+        /// </summary>
+        /// <returns></returns>
         public CSG Inverse()
         {
             var csg = this.clone();
